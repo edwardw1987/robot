@@ -1,0 +1,50 @@
+*** Settings ***
+Suite Teardown    Close Browser
+Library           Selenium2Library
+Resource          keyword.txt
+
+*** Test Cases ***
+创建云主机
+    login    http://10.240.205.10    admin@example.org    admin
+    click_sidebar    2
+    Comment    验证字符有效性0~255
+    ${hostname}    ${s}    new_host    true
+    delete_host_by_name    ${hostname}
+    Close Browser
+
+批量删除云主机
+    login    http://10.240.194.83    admin@example.org    admin
+    click_sidebar    2
+    ${h1}    ${s1}=    new_host    false
+    ${h2}    ${s2}=    new_host    false
+    ${h3}    ${s3}=    new_host    false
+    ${h4}    ${s4}=    new_host    false
+    ${prefix}=    Execute Javascript    return '${h1}'.split('_')[1].slice(0,8);
+    Run Keyword If    '${s1}' == 'ok'    halt_host_by_name    ${h1}
+    Run Keyword If    '${s2}' == 'ok'    close_host_by_name    ${h2}
+    Run Keyword If    '${s3}' == 'ok'    pause_host_by_name    ${h3}
+    delete_host_by_name    ${prefix}
+    Close Browser
+
+编辑云主机
+    login    http://10.240.194.83    admin@example.org    admin
+    click_sidebar    2
+    ${hostname}    ${s}    new_host    false
+    Run Keyword If    '${s}' == 'ok'    edit_host
+    Run Keyword If    '${s}' == 'ok'    verify_resize
+    delete_host_by_name    ${hostname}
+    Close Browser
+
+重建云主机
+    login    http://10.240.194.83    admin@example.org    admin
+    click_sidebar    2
+    ${hostname}    ${s}    new_host    false
+    Run Keyword If    '${s}' == 'ok'    reset_host_by_name    ${hostname}
+    delete_host_by_name    ${hostname}
+    Close Browser
+
+abc
+    [Template]    Open Browser
+    Comment    Open Browser    http://www.baidu.com
+    http://www.sogou.com
+    http://www.qq.com

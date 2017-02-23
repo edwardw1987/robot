@@ -1,0 +1,17 @@
+*** Settings ***
+Suite Teardown    Close Browser
+Library           Selenium2Library
+Resource          keyword.txt
+Resource          ../resources/seleniumLibrary.robot
+
+*** Test Cases ***
+login
+    initEnv
+    dologin
+    Close Browser
+
+test_sys
+    initEnv
+    open_imm
+    verify_system_info
+    [Teardown]    close browser

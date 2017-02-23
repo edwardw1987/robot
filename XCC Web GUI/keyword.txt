@@ -1,0 +1,106 @@
+*** Settings ***
+Library           Selenium2Library
+Resource          ../resources/seleniumLibrary.robot
+
+*** Variables ***
+${username}       USERID
+${password}       PASSW0RD
+${imm_url}        https://10.240.194.190/
+@{menu_indexes}    2    3    4    5    6    7    8
+
+*** Keywords ***
+login
+    [Arguments]    ${login}    ${passwd}    ${verify}=false
+    Run Keyword If    '${verify}' == 'true'    verify Supported Browser
+    Run Keyword If    '${verify}' == 'true'    verify invalid login    username    passwd
+    Run Keyword If    '${verify}' == 'true'    verify language
+    ${username}=    Get Webelement    name=username
+    Input Text    ${username}    ${login}
+    ${password}=    Get Webelement    name=password
+    Input Password    ${password}    ${passwd}
+    ${loginbtn}    Get Webelement    id=login_right_submit
+    Click Button    ${loginbtn}
+    sleep    3
+    Location Should Contain    /home
+
+dologin
+    open_imm    ${imm_url}
+    login    ${username}    ${password}
+
+verify Supported Browser
+    ${link}    Get Webelement    xpath=//*[@id="login_selLang"]/div[1]/a
+    Click Element    ${link}
+    Element Should Be Visible    id=supportedBrowser    popup supported browser dialog
+    Click Element    xpath=//*[@id="supportedBrowser"]/div/div/div[1]/button
+
+verify invalid login
+    [Arguments]    ${login}    ${passwd}
+    ${username}=    Get Webelement    name=username
+    ${password}=    Get Webelement    name=password
+    ${loginbtn}    Get Webelement    id=login_right_submit
+    ${errTip}    Get Webelement    id=errTip
+    Input Text    ${username}    ${login}
+    Input Password    ${password}    ${passwd}
+    Click Element    ${loginbtn}
+    Wait Until Element Is Visible    ${errTip}    10
+    Element Should Be Visible    ${errTip}    error msg pop up
+
+verify language
+    ${lang_sel}    Get Webelement    id=lang_sel
+    ${login_btn}    Get Webelement    id=login_right_submit_btn
+    ${old_text}    Get Text    ${login_btn}
+    Should Be Equal    ${old_text}    Login
+    Select From List By Index    ${lang_sel}    0
+    ${new_text}    Get Text    ${login_btn}
+    Should Be Equal    ${new_text}    登录
+    Select From List By Index    ${lang_sel}    2
+
+verify_system_info
+    ${product_name}    Get Text    xpath=/html/body/div[5]/div[1]/div[1]/div/div[1]/div[2]/span
+    ${system_name}    Get Text    xpath=/html/body/div[5]/div[1]/div[1]/div/div[1]/div[1]/span
+    ${machine_type}    Get Text    xpath=/html/body/div[5]/div[1]/div[1]/div/div[2]/div[1]/span[2]
+    ${serial_no}    Get Text    xpath=//div[@id='login_left_info']/div[2]/span[2]
+    ${power_state}    Get Text    xpath=//div[@id='login_left_info']/div[3]/span[2]
+    ${bmc_ip}    Get Text    xpath=//div[@id='login_left_info']/div[4]/span[2]
+    ${location}    Get Text    xpath=//div[@id='login_left_info']/div[5]/span[2]
+    login    ${username}    ${password}
+    verifyText    css=div.homeDivSysInfo.ng-scope > div.ng-binding    ${product_name}
+    verifyText    xpath=//div[@id='sysDetailInfo']/table/tbody/tr[3]/td[3]    ${system_name}
+    verifyText    css=td.sysInfoTbCol2.ng-binding    ${machine_type}
+    verifyText    xpath=//div[@id='sysDetailInfo']/table/tbody/tr[2]/td[2]    ${serial_no}
+    verifyText    xpath=//div[@id='sysDetailInfo']/div[2]/div[2]/span    ${power_state}
+    verifyText    xpath=//div[@id='sysDetailInfo']/table/tbody/tr[7]/td[2]    ${bmc_ip}
+    verifyText    css=td.sysInfoTbCol2.ng-scope > div.ng-binding    ${location}
+
+initEnv
+    Set Selenium Implicit Wait    10
+    Set Selenium Speed    .3
+
+open_imm
+    [Arguments]    ${url}=${imm_url}    ${browser}=gc
+    Open Browser    ${url}    ${browser}
+    Maximize Browser Window
+
+click_nav_menu_by_index
+    [Arguments]    ${index}
+    click    xpath=/html/body/div[4]/ul/li[${index}]/a
+
+get_nav_menu_link_by_index
+    [Arguments]    ${index}
+    ${link}    getLink    xpath=/html/body/div[4]/ul/li[${index}]/a
+    Return From Keyword    ${link}
+
+click_nav_submenu_by_index
+    [Arguments]    ${parent_index}    ${sub_index}
+    click    xpath=/html/body/div[4]/ul/li[${parent_index}]/ul/li[${sub_index}]/a
+
+get_nav_submenu_link_by_index
+    [Arguments]    ${parent_index}    ${sub_index}
+    ${link}    getLink    xpath=/html/body/div[4]/ul/li[${parent_index}]/ul/li[${sub_index}]/a
+    Return From Keyword    ${link}
+
+verify_nav_submenu
+    [Arguments]    ${parent_index}    ${sub_index}
+    click_nav_submenu_by_index    ${parent_index}    ${sub_index}
+    ${link}    get_nav_submenu_link_by_index    ${parent_index}    ${sub_index}
+    Run Keyword And Continue On Failure    WaitForLocation    ${link}

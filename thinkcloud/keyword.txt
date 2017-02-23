@@ -1,0 +1,409 @@
+*** Settings ***
+Library           Selenium2Library
+
+*** Keywords ***
+login
+    [Arguments]    ${url}    ${login}    ${passwd}
+    Open Browser    ${url}    browser=gc
+    Maximize Browser Window
+    Set Selenium Implicit Wait    10
+    Set Selenium Speed    .3
+    ${username}=    Get Webelement    name=username
+    Input Text    ${username}    ${login}
+    ${password}=    Get Webelement    name=password
+    Input Password    ${password}    ${passwd}
+    ${loginbtn}    Get Webelement    css=.js-loginBtn
+    Click Button    ${loginbtn}
+    Location Should Contain    /dashboard/admin/
+
+click_sidebar
+    [Arguments]    ${index}
+    Click Element    css=[tabindex="${index}"]
+
+new_host
+    [Arguments]    ${verify}=false    ${count}=1    ${image}=TestVM
+    Wait Until Element Is Enabled    id=create-instances
+    Click Element    id=create-instances
+    Wait Until Page Contains    云主机名字
+    Run Keyword If    '${verify}' == 'true'    verify_hostname
+    Comment    Click Element    xpath=/html/body/div[7]/div/div/wizard/div/div[1]/p
+    ${inst_name}=    Get Webelement    id=instance-name
+    ${new_hostname}    Execute Javascript    return 'cloud_' + new Date().format("yyyyMMddhhmmss");
+    input text    ${inst_name}    ${new_hostname}
+    Comment    ${input_count}    Get Webelement    id=instance-count
+    Comment    Input Text    ${input_count}    ${count}
+    Comment    sleep    1
+    Comment    Select From List By Index    id=boot-source-type    1
+    sleep    1
+    ${image_input}    Get Webelement    xpath=/html/body/div[7]/div/div/wizard/div/div[3]/ng-include/div/div/transfer-table/div/div[2]/div[2]/available/hz-magic-search-context/hz-magic-search-bar/div/div/magic-search/div/div/span[2]/span[2]/input
+    click element    ${image_input}
+    ${filter_name}    Get Webelement    xpath=/html/body/div[7]/div/div/wizard/div/div[3]/ng-include/div/div/transfer-table/div/div[2]/div[2]/available/hz-magic-search-context/hz-magic-search-bar/div/div/magic-search/div/div/span[2]/span[2]/ul/li[1]
+    Wait Until Element Is Visible    ${filter_name}
+    Click Element    ${filter_name}
+    Wait Until Element Is Not Visible    ${filter_name}
+    Input Text    ${image_input}    ${image}
+    Press Key    ${image_input}    \\13
+    sleep    1
+    click element    xpath=//*[@id="images-list"]/tbody/tr/td[4]/action-list/button
+    sleep    1
+    click element    id=step_1
+    sleep    1
+    ${add_to}    Get Webelement    xpath=//*[@id="flavor-list"]/tbody/tr[5]/td[8]/action-list/button
+    Wait Until Element Is Enabled    ${add_to}
+    click element    ${add_to}
+    sleep    2
+    click element    id=step_2
+    ${add_to}    Get Webelement    xpath=//*[@id="network-list"]/tbody/tr/td[6]/action-list/button
+    Wait Until Element Is Enabled    ${add_to}
+    click element    ${add_to}
+    sleep    1
+    click_element    id=step_5
+    ${add_to}    Get Webelement    xpath=//*[@id="key-pair-list"]/tbody/tr[1]/td[3]/action-list/button
+    Wait Until Element Is Enabled    ${add_to}
+    click element    ${add_to}
+    sleep    1
+    click element    id=finish
+    sleep    3
+    ${state}    Get Webelement    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[7]/div
+    Element Should Contain    ${state}    正在    开始创建云主机
+    Wait Until Element Does Not Contain    ${state}    正在    15
+    ${state_text}    get text    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[7]/div
+    Run Keyword And Continue On Failure    Should Be Equal    ${state_text}    可使用    完成创建
+    ${signal}=    Set Variable If    '${state_text}' == '可使用'    ok    error
+    Return From Keyword    ${new_hostname}    ${signal}
+
+delete_host
+    ${checkbox}    Get Webelement    xpath=//*[@id="table-instance"]/thead/tr[2]/th[1]/input
+    Wait Until Element Is Visible    ${checkbox}
+    Select Checkbox    ${checkbox}
+    ${del}    Get Webelement    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[5]/button
+    Wait Until Keyword Succeeds    3x    5000ms    Click Button    ${del}
+    Wait Until Page Contains    删除云主机
+    ${submit}    Get Webelement    id=submit-button
+    Click Button    ${submit}
+    ${name}    Get Webelement    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[2]/span
+    Wait Until Page Contains    无数据    99
+
+edit_host
+    ${checkbox}    Get Webelement    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[1]/input
+    Wait Until Element Is Visible    ${checkbox}
+    Select Checkbox    ${checkbox}
+    click element    id=more
+    ${edit}    Get Webelement    id=edit
+    Wait Until Element Is Visible    ${edit}
+    Click Element    ${edit}
+    Wait Until Page Contains    编辑云主机
+    ${input_name}    Get Webelement    name=name
+    ${name_ok}=    Execute Javascript    var s = ''; for (var i=1; i < 256; i++) {s += 'a'}; return s;
+    ${name_fail}=    Execute Javascript    var s = ''; for (var i=1; i <=256; i++) {s += 'a'}; return s;
+    ${alert_empty}    Get Webelement    xpath=/html/body/div[7]/div/div/form/div/div/fieldset/div/div/p[1]
+    ${alert_length}    Get Webelement    xpath=/html/body/div[7]/div/div/form/div/div/fieldset/div/div/p[2]
+    input text    ${input_name}    ${EMPTY}
+    Element Should Be Visible    ${alert_empty}
+    Element Should Not Be Visible    ${alert_length}
+    input text    ${input_name}    ${name_ok}
+    Element Should Not Be Visible    ${alert_empty}
+    Element Should Not Be Visible    ${alert_length}
+    input text    ${input_name}    ${name_fail}
+    Element Should Not Be Visible    ${alert_empty}
+    Element Should Be Visible    ${alert_length}
+    Click Element    xpath=/html/body/div[7]/div/div/div[1]/p
+
+create_snapshot
+    ${checkbox}    Get Webelement    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[1]/input
+    Wait Until Element Is Visible    ${checkbox}
+    Select Checkbox    ${checkbox}
+    click element    id=more
+    ${create_snapshot}    Get Webelement    id=create-snapshot
+    Wait Until Element Is Visible    ${create_snapshot}
+    Click Element    ${create_snapshot}
+    Wait Until Page Contains    创建快照
+    ${input_name}    Get Webelement    name=name
+    ${textarea}    Get Webelement    name=description
+    ${submit}    Get Webelement    id=submit-button
+    ${snapshot_name}    Execute Javascript    return 'snapshhot_' + new Date().format("yyyyMMddhhmmss");
+    input text    ${input_name}    ${snapshot_name}
+    input text    ${textarea}    create a snapshot for test
+    Click Button    ${submit}
+
+reset_host
+    [Arguments]    ${snapshot_name}=None
+    ${checkbox}    Get Webelement    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[1]/input
+    ${state}    Get Webelement    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[7]/div
+    Wait Until Element Is Visible    ${checkbox}
+    Select Checkbox    ${checkbox}
+    click element    id=more
+    ${rb_inst}    Get Webelement    id=rebuild-instance
+    Wait Until Element Is Visible    ${rb_inst}
+    Click Element    ${rb_inst}
+    Wait Until Page Contains    重建云主机
+    Comment    Page Should Contain    ${snapshot_name_created}
+    ${select}    Get Webelement    id=image_id
+    Comment    Select From List By Label    ${select}    ${snapshot_name_created}
+    Run Keyword Unless    '${snapshot_name}' == 'None'    Select From List By Label    ${select}    ${snapshot_name}
+    Run Keyword If    '${snapshot_name}' == 'None'    Select From List By Index    ${select}    1
+    ${password}    Get Webelement    id=password
+    ${verify}    Get Webelement    id=verify
+    ${alert}    get webelement    xpath=/html/body/div[7]/div/div/form/div/div/fieldset/div[4]/div/p[1]
+    Input Password    ${password}    123456
+    Input Password    ${verify}    123
+    Element Should Be Visible    ${alert}
+    sleep    2
+    input text    ${verify}    123456
+    element should not be visible    ${alert}
+    click element    id=submit-button
+    Page Should Contain    重建成功
+    Wait Until Element Contains    ${state}    重建    5
+    Wait Until Element Does Not Contain    ${state}    重建    30
+    ${state_text}    get text    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[7]/div
+    Should Be Equal    ${state_text}    可使用
+
+close_host
+    ${start_btn}    Get Webelement    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[2]/button
+    ${close_btn}    Get Webelement    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[3]/button
+    ${checkbox}    Get Webelement    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[1]/input
+    ${state}    Get Webelement    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[7]/div
+    Comment    1.新建一个云主机，勾选后验证关闭按钮可以点，启动按钮不可点，点击关闭按钮后，状态栏显示关机
+    Click Element    ${checkbox}
+    ${start_btn_class}    Get Element Attribute    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[2]/button@class
+    Should Contain    ${start_btn_class}    disabled
+    Click Element    ${close_btn}
+    Page Should Contain    确认关闭云主机
+    click element    id=submit-button
+    Element Should Contain    ${state}    正在
+    Wait Until Element Does Not Contain    ${state}    正在    99
+    ${state_text}    get text    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[7]/div
+    Should Be Equal    ${state_text}    关机
+
+start_host
+    ${start_btn}    Get Webelement    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[2]/button
+    ${close_btn}    Get Webelement    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[3]/button
+    ${checkbox}    Get Webelement    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[1]/input
+    ${state}    Get Webelement    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[7]/div
+    comment    2.勾选云主机，验证启动按钮可以点，关闭按钮不可点，点击启动按钮，状态栏显示运行中
+    click element    ${checkbox}
+    ${close_btn_class}    Get Element Attribute    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[3]/button@class
+    should contain    ${close_btn_class}    disabled
+    click element    ${start_btn}
+    Page Should Contain    确认启动云主机
+    click element    id=submit-button
+    Element Should Contain    ${state}    正在
+    Wait Until Element Does Not Contain    ${state}    正在    99
+    ${state_text}    get text    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[7]/div
+    Should Be Equal    ${state_text}    可使用
+
+halt_host
+    ${checkbox}    Get Webelement    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[1]/input
+    ${halt}    Get Webelement    id=suspend
+    ${state}    Get Webelement    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[7]/div
+    Select Checkbox    ${checkbox}
+    click element    id=more
+    ${resume_class}    Get Element Attribute    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[6]/ul/li[5]@class
+    Should Contain    ${resume_class}    disabled    恢复按钮已被禁用
+    Click Element    ${halt}
+    Page Should Contain    确认挂起云主机
+    click element    id=submit-button
+    Element Should Contain    ${state}    正在    开始挂起操作
+    Wait Until Element Does Not Contain    ${state}    正在    15
+    ${state_text}    get text    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[7]/div
+    Should Be Equal    ${state_text}    挂起    完成挂起操作
+
+resume_host
+    ${checkbox}    Get Webelement    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[1]/input
+    ${resume}    get webelement    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[6]/ul/li[5]
+    ${state}    Get Webelement    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[7]/div
+    select checkbox    ${checkbox}
+    click element    id=more
+    ${halt_class}    Get Element Attribute    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[6]/ul/li[4]@class
+    Should Contain    ${halt_class}    disabled    挂起按钮已被禁用
+    Click Element    ${resume}
+    Page Should Contain    确认恢复挂起的云主机
+    click element    id=submit-button
+    Wait Until Element Does Not Contain    ${state}    挂起    15
+    ${state_text}    get text    ${state}
+    Should Be Equal    ${state_text}    可使用
+
+halt_host_many
+    ${checkbox}    Get Webelement    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[1]/input
+    ${checkbox2}    Get Webelement    xpath=//*[@id="table-instance"]/tbody/tr[2]/td[1]/input
+    ${halt}    get webelement    id=suspend
+    ${state}    Get Webelement    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[7]/div
+    ${state2}    Get Webelement    xpath=//*[@id="table-instance"]/tbody/tr[2]/td[7]/div
+    Select Checkbox    ${checkbox}
+    Select Checkbox    ${checkbox2}
+    click element    id=more
+    ${resume_class}    Get Element Attribute    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[6]/ul/li[5]@class
+    Should Contain    ${resume_class}    disabled    恢复按钮已被禁用
+    Click Element    ${halt}
+    Page Should Contain    确认挂起云主机
+    click element    id=submit-button
+    Element Should Contain    ${state}    正在    开始挂起操作
+    Element Should Contain    ${state2}    正在    开始挂起操作
+    Wait Until Element Does Not Contain    ${state}    正在    15
+    Wait Until Element Does Not Contain    ${state2}    正在    15
+    ${state_text}    get text    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[7]/div
+    ${state2_text}    get text    xpath=//*[@id="table-instance"]/tbody/tr[2]/td[7]/div
+    Should Be Equal    ${state_text}    挂起    完成挂起操作
+    Should Be Equal    ${state2_text}    挂起    完成挂起操作
+    comment    验证挂载、卸载云硬盘按钮已被禁用
+    select checkbox    ${checkbox}
+    select checkbox    ${checkbox2}
+    click element    id=more
+    ${mount_hd_class}    Get Element Attribute    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[6]/ul/li[9]@class
+    ${unmount_hd_class}    Get Element Attribute    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[6]/ul/li[10]@class
+    ${connect_net_class}    Get Element Attribute    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[6]/ul/li[13]@class
+    ${disconnect_net_class}    Get Element Attribute    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[6]/ul/li[14]@class
+    ${reset_host_class}    Get Element Attribute    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[6]/ul/li[17]@class
+    ${pause_class}    Get Element Attribute    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[6]/ul/li[6]@class
+    ${resume_pause_class}    Get Element Attribute    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[6]/ul/li[7]@class
+    ${reboot_class}    Get Element Attribute    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[6]/ul/li[8]@class
+    Should Contain    ${mount_hd_class}    disabled    挂载硬盘
+    Should Contain    ${unmount_hd_class}    disabled    卸载硬盘
+    Should Contain    ${connect_net_class}    disabled    连接网络
+    Should Contain    ${disconnect_net_class}    disabled    断开网络
+    Should Contain    ${reset_host_class}    disabled    重建云主机
+    Should Contain    ${pause_class}    disabled    暂停
+    Should Contain    ${resume_pause_class}    disabled    恢复暂停
+    Should Contain    ${reboot_class}    disabled    重启
+    click element    id=more
+
+resume_host_many
+    ${checkbox}    Get Webelement    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[1]/input
+    ${checkbox2}    Get Webelement    xpath=//*[@id="table-instance"]/tbody/tr[2]/td[1]/input
+    ${resume}    get webelement    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[6]/ul/li[5]
+    ${state}    Get Webelement    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[7]/div
+    ${state2}    Get Webelement    xpath=//*[@id="table-instance"]/tbody/tr[2]/td[7]/div
+    select checkbox    ${checkbox}
+    select checkbox    ${checkbox2}
+    click element    id=more
+    ${halt_class}    Get Element Attribute    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[6]/ul/li[4]@class
+    Should Contain    ${halt_class}    disabled    挂起按钮已被禁用
+    Click Element    ${resume}
+    Page Should Contain    确认恢复挂起的云主机
+    click element    id=submit-button
+    Wait Until Element Does Not Contain    ${state}    挂起    15
+    Wait Until Element Does Not Contain    ${state2}    挂起    15
+    ${state_text}    get text    ${state}
+    ${state2_text}    get text    ${state2}
+    Should Be Equal    ${state_text}    可使用
+    Should Be Equal    ${state2_text}    可使用
+
+search_host_by_name
+    [Arguments]    ${name}
+    ${search_input}    Get Webelement    xpath=//*[@id="search"]/div/div/magic-search/div/div/span[2]/span[2]/input
+    click element    ${search_input}
+    ${filter_name}    Get Webelement    xpath=//*[@id="search"]/div/div/magic-search/div/div/span[2]/span[2]/ul/li[1]
+    Click Element    ${filter_name}
+    input text    ${search_input}    ${name}
+    Press Key    ${search_input}    \\13
+    ${name_text}    Get Text    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[2]/span
+    Should Contain    ${name_text}    ${name}
+
+verify_hostname
+    ${inst_name}=    Get Webelement    id=instance-name
+    ${name_ok}=    Execute Javascript    var s = ''; for (var i=1; i < 256; i++) {s += 'a'}; return s;
+    ${name_fail}=    Execute Javascript    var s = ''; for (var i=1; i <=256; i++) {s += 'a'}; return s;
+    ${popover_length}    Get Webelement    css=[popover="名字长度不能超过255个字符"]
+    ${popover_not_empty}    Get Webelement    css=[popover="您的云主机名字是必须的。"]
+    Input Text    ${inst_name}    ${name_ok}
+    sleep    1
+    Element Should not Be Visible    ${popover_length}    验证输入有效性（1~255)
+    Clear Element Text    ${inst_name}
+    sleep    1
+    Element Should Be Visible    ${popover_not_empty}    验证输入不为空
+    Input Text    ${inst_name}    ${name_fail}
+    sleep    1
+    Element Should Be Visible    ${popover_length}    验证输入有效性（1~255)
+    sleep    1
+
+verify_resize
+    ${checkbox}    Get Webelement    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[1]/input
+    ${resize}    get webelement    id=resize
+    ${state}    Get Webelement    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[7]/div
+    Select Checkbox    ${checkbox}
+    click element    id=more
+    Click Element    ${resize}
+    Page Should Contain    调整云主机配置
+    ${cpu_first}    Get Webelement    xpath=//*[@id="cpuList"]/li[1]
+    ${cpu_active}    Get Webelement    css=#cpuList>li.instance-selected
+    ${ram_first}    Get Webelement    xpath=//*[@id="ramList"]/li[1]
+    ${ram_active}    Get Webelement    css=#ramList>li.instance-selected
+    ${disk_first}    Get Webelement    xpath=//*[@id="diskList"]/li[1]
+    ${disk_active}    Get Webelement    css=#diskList>li.instance-selected
+    Run Keyword Unless    '${cpu_first}' == '${cpu_active}'    verify_resize_item    xpath=//*[@id="cpuList"]/li[1]
+    Run Keyword Unless    '${ram_first}' == '${ram_active}'    verify_resize_item    xpath=//*[@id="ramList"]/li[1]
+    Run Keyword Unless    '${disk_first}' == '${disk_active}'    verify_resize_item    xpath=//*[@id="diskList"]/li[1]
+    Click Element    xpath=/html/body/div[7]/div/div/div[1]/p
+
+verify_resize_item
+    [Arguments]    ${locator}
+    ${attr_locator}    Execute Javascript    return '${locator}' + '@class'
+    ${class}    Get Element Attribute    ${attr_locator}
+    Should Be Empty    ${class}
+
+delete_host_by_name
+    [Arguments]    ${hostname}
+    search_host_by_name    ${hostname}
+    delete_host
+    Reload Page
+
+halt_host_by_name
+    [Arguments]    ${hostname}
+    search_host_by_name    ${hostname}
+    halt_host
+    Reload Page
+
+verify_halt_dropdown_disabled
+    ${checkbox}    Get Webelement    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[1]/input
+    comment    验证挂载、卸载云硬盘按钮已被禁用
+    select checkbox    ${checkbox}
+    click element    id=more
+    ${mount_hd_class}    Get Element Attribute    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[6]/ul/li[9]@class
+    ${unmount_hd_class}    Get Element Attribute    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[6]/ul/li[10]@class
+    ${connect_net_class}    Get Element Attribute    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[6]/ul/li[13]@class
+    ${disconnect_net_class}    Get Element Attribute    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[6]/ul/li[14]@class
+    ${reset_host_class}    Get Element Attribute    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[6]/ul/li[17]@class
+    ${pause_class}    Get Element Attribute    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[6]/ul/li[6]@class
+    ${resume_pause_class}    Get Element Attribute    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[6]/ul/li[7]@class
+    ${reboot_class}    Get Element Attribute    xpath=//*[@id="table-instance"]/thead/tr[1]/th/div/action-list[6]/ul/li[8]@class
+    Should Contain    ${mount_hd_class}    disabled    挂载硬盘
+    Should Contain    ${unmount_hd_class}    disabled    卸载硬盘
+    Should Contain    ${connect_net_class}    disabled    连接网络
+    Should Contain    ${disconnect_net_class}    disabled    断开网络
+    Should Contain    ${reset_host_class}    disabled    重建云主机
+    Should Contain    ${pause_class}    disabled    暂停
+    Should Contain    ${resume_pause_class}    disabled    恢复暂停
+    Should Contain    ${reboot_class}    disabled    重启
+    click element    id=more
+
+close_host_by_name
+    [Arguments]    ${hostname}
+    search_host_by_name    ${hostname}
+    close_host
+    Reload Page
+
+pause_host_by_name
+    [Arguments]    ${hostname}
+    search_host_by_name    ${hostname}
+    pause_host
+    Reload Page
+
+pause_host
+    ${checkbox}    Get Webelement    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[1]/input
+    ${pause}    Get Webelement    id=pause
+    ${state}    Get Webelement    xpath=//*[@id="table-instance"]/tbody/tr[1]/td[7]/div
+    ${old_state_text}    Get Text    ${state}
+    Select Checkbox    ${checkbox}
+    click element    id=more
+    Click Element    ${pause}
+    Page Should Contain    确认暂停云主机
+    click element    id=submit-button
+    Wait Until Element Does Not Contain    ${state}    ${old_state_text}    15
+    ${new_state_text}    get text    ${state}
+    Should Be Equal    ${new_state_text}    暂停    完成挂起操作
+
+reset_host_by_name
+    [Arguments]    ${hostname}
+    search_host_by_name    ${hostname}
+    reset_host
+    Reload Page

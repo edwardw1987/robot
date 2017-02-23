@@ -1,0 +1,49 @@
+*** Settings ***
+Suite Teardown    Close Browser
+Library           Selenium2Library
+Resource          keyword.txt
+Resource          ../resources/seleniumLibrary.robot
+
+*** Test Cases ***
+left nav menu
+    comment    初始化webdriver
+    initEnv
+    comment    进行登录
+    dologin
+    Comment    click the first 6 menus items respectively    all menus go to selected pagebrowser ` location` changed correctly"
+    click_nav_menu_by_index    2
+    ${loc}    get_nav_menu_link_by_index    2
+    Run Keyword And Continue On Failure    WaitForLocation    ${loc}
+    click_nav_menu_by_index    3
+    ${loc}    get_nav_menu_link_by_index    3
+    Run Keyword And Continue On Failure    WaitForLocation    ${loc}
+    click_nav_menu_by_index    4
+    ${loc}    get_nav_menu_link_by_index    4
+    Run Keyword And Continue On Failure    WaitForLocation    ${loc}
+    ${loc}    get_nav_menu_link_by_index    5
+    click_nav_menu_by_index    5
+    Run Keyword And Continue On Failure    WaitForLocation    ${loc}
+    ${loc}    get_nav_menu_link_by_index    6
+    click_nav_menu_by_index    6
+    Run Keyword And Continue On Failure    WaitForLocation    ${loc}
+    Comment    click the last 2 menus    Click it to show sub-menu list and the right-towards icon will turn to “Down”.    click the last 2 menus sub menus    click any sub-menu to open selected page
+    click_nav_menu_by_index    7
+    verifyHasClass    xpath=/html/body/div[4]/ul/li[7]/a    showSubsItem
+    verify_nav_submenu    7    1
+    verify_nav_submenu    7    2
+    verify_nav_submenu    7    3
+    verify_nav_submenu    7    4
+    verify_nav_submenu    7    5
+    click_nav_menu_by_index    8
+    verifyHasClass    xpath=/html/body/div[4]/ul/li[8]/a    showSubsItem
+    verify_nav_submenu    8    1
+    verify_nav_submenu    8    2
+    verify_nav_submenu    8    3
+    verify_nav_submenu    8    4
+    verify_nav_submenu    8    5
+
+top left bar
+    ${product_v}    Set Variable    Lenovo SR950 Server
+    verifyText    id=immProName    ${product_v}
+    ${system_v}    Set Variable    09ALSKDGFSKL
+    verifyText    xpath=/html/body/div[2]/div[3]/div[2]/span[2]    ${system_v}
